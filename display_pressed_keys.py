@@ -20,7 +20,7 @@ while True:
     for key_constant, pressed in enumerate(pressed_keys):
         if pressed:
             key_name = pygame.key.name(key_constant)
-            text_surface = font.render()
+            text_surface = font.render(key_name, True, (0, 0, 0))
             screen.blit(text_surface, (8, y))
             y += font_height
     pygame.display.update()
