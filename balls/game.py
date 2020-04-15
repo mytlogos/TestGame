@@ -1,6 +1,7 @@
 from abc import ABC
 from datetime import datetime
 from enum import Enum
+from random import randint
 from typing import Union, Optional
 
 from pygame.rect import Rect
@@ -145,7 +146,9 @@ class Game:
         self.time_to_last_tick = 0
 
     def start(self) -> None:
-        destination = Vector2(self.left_player.rect.center) - (Vector2(5, 5) / 2)
+        y_direction = randint(0, self.screen_rect.bottom)
+        x_direction = randint(0, self.screen_rect.right)
+        destination = Vector2(x_direction, y_direction) - (Vector2(5, 5) / 2)
         heading = Vector2.from_points(self.screen_rect.center, destination)
         heading.normalize()
         self.ball.direction = heading
