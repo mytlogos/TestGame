@@ -1,5 +1,6 @@
 import time
 from abc import ABC, abstractmethod
+from datetime import datetime
 from sys import exit
 from typing import Tuple
 
@@ -17,6 +18,23 @@ bar_dimension = (10, 100)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 Color = Tuple[int, int, int]
+
+
+def diffTime(end, start):
+    diff = (end - start).total_seconds()
+    d = int(diff / 86400)
+    h = int((diff - (d * 86400)) / 3600)
+    m = int((diff - (d * 86400 + h * 3600)) / 60)
+    s = int((diff - (d * 86400 + h * 3600 + m * 60)))
+    if d > 0:
+        result = f'{d}d {h}h {m}m {s}s'
+    elif h > 0:
+        result = f'{h}h {m}m {s}s'
+    elif m > 0:
+        result = f'{m}m {s}s'
+    else:
+        result = f'{s}s'
+    return result
 
 
 class Texture(ABC):
@@ -67,10 +85,14 @@ class GameInfoTexture(Texture):
         self.right_player_name = self.font.render(current_game.right_player.name, True, WHITE)
 
     def render(self, surface: pygame.Surface):
-        surface.blit(self.left_player_name, (self.rect.left + 5, self.rect.top + 5))
+        left_player_rect = surface.blit(self.left_player_name, (self.rect.left + 5, self.rect.top + 5))
 
         right_player_beginning = self.rect.right - self.right_player_name.get_width() - 5
         surface.blit(self.right_player_name, (right_player_beginning, self.rect.top + 5))
+
+        time_running = diffTime(datetime.now(), self.game.started_at)
+        time_surface = self.font.render(time_running, True, WHITE)
+        surface.blit(time_surface, (self.rect.left + 5, left_player_rect.bottom + 5))
 
         startpos = (self.rect.left, self.rect.bottom)
         endpos = (self.rect.right, self.rect.bottom)
