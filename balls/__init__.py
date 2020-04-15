@@ -77,7 +77,6 @@ class GameRenderer:
 
     def draw_running_game(self):
         screen_rect = self.screen.get_clip()
-        self.game.screen_rect = screen_rect
         rect_y_position = min(pygame.mouse.get_pos()[1], screen_rect.bottom - bar_dimension[1])
         time_passed = clock.tick()
         time_passed_seconds = time_passed / 1000.0
