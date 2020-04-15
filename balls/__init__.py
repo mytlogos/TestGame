@@ -14,7 +14,8 @@ pygame.init()
 clock = pygame.time.Clock()
 
 bar_dimension = (10, 100)
-
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
 Color = Tuple[int, int, int]
 
 
@@ -48,7 +49,7 @@ class BallTexture(Texture):
     def render(self, surface: pygame.Surface):
         x = int(self.ball.rect.x)
         y = int(self.ball.rect.y)
-        pygame.draw.circle(surface, (255, 255, 255), (x, y), 5)
+        pygame.draw.circle(surface, WHITE, (x, y), 5)
 
 
 class GameInfoTexture(Texture):
@@ -61,7 +62,7 @@ class GameInfoTexture(Texture):
     def render(self, surface: pygame.Surface):
         startpos = (self.rect.left, self.rect.bottom)
         endpos = (self.rect.right, self.rect.bottom)
-        pygame.draw.aaline(surface, (255, 255, 255), startpos, endpos)
+        pygame.draw.aaline(surface, WHITE, startpos, endpos)
 
 
 class Renderer(ABC):
@@ -72,7 +73,7 @@ class Renderer(ABC):
 
     @abstractmethod
     def draw(self, surface: pygame.Surface):
-        surface.fill((0, 0, 0))
+        surface.fill(BLACK)
 
     def tick(self) -> "Renderer":
         return self
@@ -101,23 +102,22 @@ class StartupGameRenderer(Renderer):
         info_area = Rect(screen_rect.left, screen_rect.top, screen_rect.width, 50)
         game_area = Rect(screen_rect.left, screen_rect.top + 50, screen_rect.width, screen_rect.height - 50)
 
-        info_texture = GameInfoTexture(info_area)
-
         left_player_rect = Rect((game_area.left, game_area.centery), bar_dimension)
         left_player = AiPlayer(left_player_rect, game_area, "Player 1", False)
 
         right_player_rect = Rect((game_area.right - bar_dimension[0], game_area.centery), bar_dimension)
         right_player = AiPlayer(right_player_rect, game_area, "Player 2", True)
 
-        left_player_texture = PlayerTexture(left_player, (255, 255, 255))
-        right_player_texture = PlayerTexture(right_player, (255, 255, 255))
+        left_player_texture = PlayerTexture(left_player, WHITE)
+        right_player_texture = PlayerTexture(right_player, WHITE)
 
         ball = Ball(Rect(game_area.center, (10, 5)), game_area, Vector2(), 5, 250)
-        ball_texture = BallTexture(ball, (255, 255, 255))
+        ball_texture = BallTexture(ball, WHITE)
         current_game = Game(ball, left_player, right_player, game_area)
         right_player.game = current_game
         left_player.game = current_game
 
+        info_texture = GameInfoTexture(info_area, current_game)
         return RunningGameRenderer(self.master, current_game, ball_texture, left_player_texture,
                                    right_player_texture, info_texture)
 
