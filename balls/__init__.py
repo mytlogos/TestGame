@@ -54,12 +54,24 @@ class BallTexture(Texture):
 
 class GameInfoTexture(Texture):
     rect: Rect
+    game: Game
+    left_player_name: pygame.Surface
+    right_player_name: pygame.Surface
 
-    def __init__(self, rect: Rect) -> None:
+    def __init__(self, rect: Rect, current_game: Game) -> None:
         super().__init__()
         self.rect = rect
+        self.game = current_game
+        self.font = pygame.font.SysFont("arial", 16)
+        self.left_player_name = self.font.render(current_game.left_player.name, True, WHITE)
+        self.right_player_name = self.font.render(current_game.right_player.name, True, WHITE)
 
     def render(self, surface: pygame.Surface):
+        surface.blit(self.left_player_name, (self.rect.left + 5, self.rect.top + 5))
+
+        right_player_beginning = self.rect.right - self.right_player_name.get_width() - 5
+        surface.blit(self.right_player_name, (right_player_beginning, self.rect.top + 5))
+
         startpos = (self.rect.left, self.rect.bottom)
         endpos = (self.rect.right, self.rect.bottom)
         pygame.draw.aaline(surface, WHITE, startpos, endpos)
