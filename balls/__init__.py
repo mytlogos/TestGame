@@ -2,7 +2,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from sys import exit
-from typing import Tuple
+from typing import Tuple, List, Callable
 
 import pygame
 from pygame.locals import *
@@ -116,12 +116,68 @@ class Renderer(ABC):
         pass
 
 
+ClickHandler = Callable[[], None]
+
+
+class MenuItem(Texture):
+    rect: Rect
+    index: int
+    text_rect: Rect
+    text_surface: pygame.Surface
+    hovering: bool
+    click_handler: ClickHandler
+
+    def __init__(self, index: int, parent_rect: Rect, text: str, handler: ClickHandler) -> None:
+        super().__init__()
+        left, width = parent_rect.left, parent_rect.width
+        height = 50
+        top = parent_rect.top + (index * height)
+        self.rect = Rect(left, top, width, height)
+        padding = 5
+        font = pygame.font.SysFont("arial", height - (padding * 2))
+        self.text_surface = font.render(text, True, WHITE, BLACK)
+        self.text_surface_hovered = font.render(text, True, BLACK, WHITE)
+        text_rect = self.text_surface.get_clip()
+
+        padding_x = int((width - text_rect.width) / 2)
+        padding_y = int((height - text_rect.height) / 2)
+        self.text_rect = Rect(left + padding_x, top + padding_y, width - (padding_x * 2), height - (padding_y * 2))
+        self.index = index
+
+    def on_click(self):
+        if self.click_handler:
+            self.click_handler()
+
+    def render(self, surface: pygame.Surface):
+        if self.hovering:
+            pygame.draw.rect(surface, WHITE, self.rect)
+            surface.blit(self.text_surface_hovered, self.text_rect)
+        else:
+            pygame.draw.rect(surface, WHITE, self.rect, 2)
+            surface.blit(self.text_surface, self.text_rect)
+
+
 class StartupGameRenderer(Renderer):
+    menu_items: List[MenuItem]
+
     def __init__(self, master: "PingPongRenderer") -> None:
         super().__init__(master)
+        rect: Rect = master.screen.get_clip()
+        width = 300
+        height = 200
+        top = int(rect.centery - (height / 2))
+        left = int(rect.centerx - (width / 2))
+        self.rect = Rect((left, top), (width, height))
+        self.menu_items = [MenuItem(0, self.rect, "Create Game")]
 
     def draw(self, surface: pygame.Surface):
         super(StartupGameRenderer, self).draw(surface)
+        pygame.draw.rect(surface, WHITE, self.rect, 2)
+        mouse_pos = pygame.mouse.get_pos()
+
+        for item in self.menu_items:
+            item.hovering = item.rect.collidepoint(*mouse_pos)
+            item.render(surface)
 
     def handle_event(self, event: pygame.event.EventType):
         if event.type == MOUSEBUTTONDOWN:
