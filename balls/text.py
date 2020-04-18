@@ -1,6 +1,7 @@
 """
 Copyright 2017, Silas Gyger, silasgyger@gmail.com, All rights reserved.
 Borrowed from https://github.com/Nearoo/pygame-text-input under the MIT license.
+Modified from mytlogos.
 """
 
 import os.path
@@ -17,6 +18,8 @@ class TextInput:
     This class let's the user input a short, one-lines piece of text at a blinking cursor
     that can be moved using the arrow-keys. Delete, home and end work as well.
     """
+    width: int
+
     def __init__(
             self,
             initial_string="",
@@ -27,7 +30,8 @@ class TextInput:
             cursor_color=(0, 0, 1),
             repeat_keys_initial_ms=400,
             repeat_keys_interval_ms=35,
-            max_string_length=-1):
+            max_string_length=-1,
+            width=-1):
         """
         :param initial_string: Initial text to be displayed
         :param font_family: name or list of names for font (see pygame.font.match_font for precise format)
@@ -46,6 +50,7 @@ class TextInput:
         self.font_size = font_size
         self.max_string_length = max_string_length
         self.input_string = initial_string  # Inputted text
+        self.width = width
 
         if not os.path.isfile(font_family):
             font_family = pygame.font.match_font(font_family)
@@ -72,6 +77,7 @@ class TextInput:
         self.clock = pygame.time.Clock()
 
     def update(self, events):
+        previous_text = self.get_text()
         for event in events:
             if event.type == pygame.KEYDOWN:
                 self.cursor_visible = True  # So the user sees where he writes
@@ -82,16 +88,16 @@ class TextInput:
 
                 if event.key == pl.K_BACKSPACE:
                     self.input_string = (
-                        self.input_string[:max(self.cursor_position - 1, 0)]
-                        + self.input_string[self.cursor_position:]
+                            self.input_string[:max(self.cursor_position - 1, 0)]
+                            + self.input_string[self.cursor_position:]
                     )
 
                     # Subtract one from cursor_pos, but do not go below zero:
                     self.cursor_position = max(self.cursor_position - 1, 0)
                 elif event.key == pl.K_DELETE:
                     self.input_string = (
-                        self.input_string[:self.cursor_position]
-                        + self.input_string[self.cursor_position + 1:]
+                            self.input_string[:self.cursor_position]
+                            + self.input_string[self.cursor_position + 1:]
                     )
 
                 elif event.key == pl.K_RETURN:
@@ -114,9 +120,9 @@ class TextInput:
                 elif len(self.input_string) < self.max_string_length or self.max_string_length == -1:
                     # If no special key is pressed, add unicode of key to input_string
                     self.input_string = (
-                        self.input_string[:self.cursor_position]
-                        + event.unicode
-                        + self.input_string[self.cursor_position:]
+                            self.input_string[:self.cursor_position]
+                            + event.unicode
+                            + self.input_string[self.cursor_position:]
                     )
                     self.cursor_position += len(event.unicode)  # Some are empty, e.g. K_UP
 
@@ -132,15 +138,28 @@ class TextInput:
             # Generate new key events if enough time has passed:
             if self.keyrepeat_counters[key][0] >= self.keyrepeat_intial_interval_ms:
                 self.keyrepeat_counters[key][0] = (
-                    self.keyrepeat_intial_interval_ms
-                    - self.keyrepeat_interval_ms
+                        self.keyrepeat_intial_interval_ms
+                        - self.keyrepeat_interval_ms
                 )
 
                 event_key, event_unicode = key, self.keyrepeat_counters[key][1]
                 pygame.event.post(pygame.event.Event(pl.KEYDOWN, key=event_key, unicode=event_unicode))
 
+        visible_string = self.input_string
+
+        if self.width > 0:
+            # just use a random char to get an estimate of how big a single char could be
+            # divide by 2 to get a sane minimum char width
+            min_char_width = (self.font_object.size("M")[0]) / 2
+            min_visible_length = int(self.width / min_char_width)
+            visible_length = min(min_visible_length, len(visible_string))
+            visible_string = visible_string[len(visible_string) - visible_length:]
+
+        while 0 < self.width < self.font_object.size(visible_string)[0]:
+            visible_string = visible_string[1:]
+
         # Re-render text surface:
-        self.surface = self.font_object.render(self.input_string, self.antialias, self.text_color)
+        self.surface = self.font_object.render(visible_string, self.antialias, self.text_color)
 
         # Update self.cursor_visible
         self.cursor_ms_counter += self.clock.get_time()
@@ -176,7 +195,6 @@ class TextInput:
     def clear_text(self):
         self.input_string = ""
         self.cursor_position = 0
-
 
 
 if __name__ == "__main__":
