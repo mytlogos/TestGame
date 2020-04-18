@@ -15,12 +15,12 @@ pygame.init()
 clock = pygame.time.Clock()
 
 bar_dimension = (10, 100)
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
 Color = Tuple[int, int, int]
+WHITE: Color = (255, 255, 255)
+BLACK: Color = (0, 0, 0)
 
 
-def diffTime(end, start):
+def diff_time(end, start):
     diff = (end - start).total_seconds()
     d = int(diff / 86400)
     h = int((diff - (d * 86400)) / 3600)
@@ -90,7 +90,7 @@ class GameInfoTexture(Texture):
         right_player_beginning = self.rect.right - self.right_player_name.get_width() - 5
         surface.blit(self.right_player_name, (right_player_beginning, self.rect.top + 5))
 
-        time_running = diffTime(datetime.now(), self.game.started_at)
+        time_running = diff_time(datetime.now(), self.game.started_at)
         time_surface = self.font.render(time_running, True, WHITE)
         surface.blit(time_surface, (self.rect.left + 5, left_player_rect.bottom + 5))
 
@@ -143,6 +143,7 @@ class MenuItem(Texture):
         padding_y = int((height - text_rect.height) / 2)
         self.text_rect = Rect(left + padding_x, top + padding_y, width - (padding_x * 2), height - (padding_y * 2))
         self.index = index
+        self.click_handler = handler
 
     def on_click(self):
         if self.click_handler:
@@ -168,24 +169,52 @@ class StartupGameRenderer(Renderer):
         top = int(rect.centery - (height / 2))
         left = int(rect.centerx - (width / 2))
         self.rect = Rect((left, top), (width, height))
-        self.menu_items = [MenuItem(0, self.rect, "Create Game")]
+        sub_rect = Rect(0, 0, width, height)
+        self.menu_items = [
+            MenuItem(0, sub_rect, "Create Game", self.create_game),
+            MenuItem(1, sub_rect, "Highscore", self.display_highscore),
+            MenuItem(2, sub_rect, "About", self.display_about)
+        ]
+        self.background_surface = pygame.Surface((rect.width, rect.height))
+        self.background_surface.set_alpha(100)
+        self.foreground_surface = pygame.Surface((width, height))
+        self.foreground_surface.set_alpha(255)
 
     def draw(self, surface: pygame.Surface):
-        super(StartupGameRenderer, self).draw(surface)
-        pygame.draw.rect(surface, WHITE, self.rect, 2)
-        mouse_pos = pygame.mouse.get_pos()
+        surface.fill(WHITE)
+        self.background_surface.fill(BLACK)
+        super(StartupGameRenderer, self).draw(self.foreground_surface)
+
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        # translate mouse position from screen to subsurface
+        mouse_x -= self.rect.left
+        mouse_y -= self.rect.top
 
         for item in self.menu_items:
-            item.hovering = item.rect.collidepoint(*mouse_pos)
-            item.render(surface)
+            item.hovering = item.rect.collidepoint(mouse_x, mouse_y)
+            item.render(self.foreground_surface)
+
+        surface.blit(self.background_surface, self.background_surface.get_clip())
+        surface.blit(self.foreground_surface, self.rect)
 
     def handle_event(self, event: pygame.event.EventType):
         if event.type == MOUSEBUTTONDOWN:
-            renderer = self.start_game()
-            self.master.renderer = renderer
-            renderer.game.start()
-            clock.tick()
-            pygame.mouse.set_visible(False)
+            for item in self.menu_items:
+                if item.rect.collidepoint(*event.pos):
+                    item.on_click()
+
+    def create_game(self):
+        renderer = self.start_game()
+        self.master.renderer = renderer
+        renderer.game.start()
+        clock.tick()
+        pygame.mouse.set_visible(False)
+
+    def display_highscore(self):
+        print(self)
+
+    def display_about(self):
+        print(self)
 
     def start_game(self) -> "RunningGameRenderer":
         screen_rect = self.master.screen.get_clip()
@@ -269,7 +298,7 @@ class PingPongRenderer:
     renderer: Renderer
 
     def start(self):
-        self.screen = pygame.display.set_mode((640, 480), 0, 32)
+        self.screen = pygame.display.set_mode((640, 480), pygame.RESIZABLE, 32)
         self.renderer = StartupGameRenderer(self)
         self.loop()
 
