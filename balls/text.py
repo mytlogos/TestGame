@@ -150,7 +150,7 @@ class TextInput:
         if self.width > 0:
             # just use a random char to get an estimate of how big a single char could be
             # divide by 2 to get a sane minimum char width
-            min_char_width = (self.font_object.size("M")[0]) / 2
+            min_char_width = (self.font_object.size("i")[0])
             min_visible_length = int(self.width / min_char_width)
             visible_length = min(min_visible_length, len(visible_string))
             visible_string = visible_string[len(visible_string) - visible_length:]
