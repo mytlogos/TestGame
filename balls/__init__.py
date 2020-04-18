@@ -160,6 +160,7 @@ class MenuItem(Texture):
 
 class StartupGameRenderer(Renderer):
     menu_items: List[MenuItem]
+    background_game: "RunningGameRenderer"
 
     def __init__(self, master: "PingPongRenderer") -> None:
         super().__init__(master)
@@ -179,11 +180,28 @@ class StartupGameRenderer(Renderer):
         self.background_surface.set_alpha(100)
         self.foreground_surface = pygame.Surface((width, height))
         self.foreground_surface.set_alpha(255)
+        self.background_game = self.create_background_game()
+
+    def create_background_game(self) -> "RunningGameRenderer":
+        renderer = self.start_game()
+        renderer.game.start()
+        clock.tick()
+        return renderer
+
+    def tick(self) -> "Renderer":
+        renderer = self.background_game.tick()
+
+        # when previous game finished, create a new game
+        if renderer != self.background_game:
+            self.background_game = self.create_background_game()
+        return super().tick()
 
     def draw(self, surface: pygame.Surface):
         surface.fill(WHITE)
-        self.background_surface.fill(BLACK)
+        super(StartupGameRenderer, self).draw(self.background_surface)
         super(StartupGameRenderer, self).draw(self.foreground_surface)
+
+        self.background_game.draw(self.background_surface)
 
         mouse_x, mouse_y = pygame.mouse.get_pos()
         # translate mouse position from screen to subsurface
