@@ -180,6 +180,7 @@ class Game:
     screen_rect: Rect
     time_to_last_tick: float
     started_at: Optional[datetime]
+    player_won: Optional[Player]
 
     def __init__(self, ball: Ball, left_player: Player, right_player: Player, board_rect: Rect) -> None:
         self.screen_rect = board_rect
@@ -188,6 +189,7 @@ class Game:
         self.ball = ball
         self.game_state = GameState.WAIT_TO_START
         self.time_to_last_tick = 0
+        self.player_won = None
 
     def start(self) -> None:
         y_direction = randint(0, self.screen_rect.bottom)
@@ -220,6 +222,10 @@ class Game:
 
         if game_result is not None:
             self.game_state = GameState.FINISHED
+            if game_result:
+                self.player_won = self.left_player
+            else:
+                self.player_won = self.right_player
         else:
             # move player bars
             self.left_player.move(0, left_player_pos)

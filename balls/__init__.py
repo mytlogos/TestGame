@@ -18,6 +18,7 @@ bar_dimension = (10, 100)
 Color = Tuple[int, int, int]
 WHITE: Color = (255, 255, 255)
 BLACK: Color = (0, 0, 0)
+NEARLY_BLACK: Color = (1, 1, 1)
 
 
 def diff_time(end, start):
@@ -83,6 +84,7 @@ class GameInfoTexture(Texture):
         self.font = pygame.font.SysFont("arial", 16)
         self.left_player_name = self.font.render(current_game.left_player.name, True, WHITE)
         self.right_player_name = self.font.render(current_game.right_player.name, True, WHITE)
+        self.time_surface = self.font.render("0s", True, WHITE)
 
     def render(self, surface: pygame.Surface):
         left_player_rect = surface.blit(self.left_player_name, (self.rect.left + 5, self.rect.top + 5))
@@ -90,9 +92,10 @@ class GameInfoTexture(Texture):
         right_player_beginning = self.rect.right - self.right_player_name.get_width() - 5
         surface.blit(self.right_player_name, (right_player_beginning, self.rect.top + 5))
 
-        time_running = diff_time(datetime.now(), self.game.started_at)
-        time_surface = self.font.render(time_running, True, WHITE)
-        surface.blit(time_surface, (self.rect.left + 5, left_player_rect.bottom + 5))
+        if self.game.game_state == GameState.RUNNING:
+            time_running = diff_time(datetime.now(), self.game.started_at)
+            self.time_surface = self.font.render(time_running, True, WHITE)
+        surface.blit(self.time_surface, (self.rect.left + 5, left_player_rect.bottom + 5))
 
         startpos = (self.rect.left, self.rect.bottom)
         endpos = (self.rect.right, self.rect.bottom)
@@ -541,11 +544,45 @@ class StartupGameRenderer(Renderer):
 
 
 class FinishedGameRenderer(Renderer):
-    def __init__(self, master: "PingPongRenderer") -> None:
-        super().__init__(master)
+    master: "PingPongRenderer"
+    running_game_renderer: "RunningGameRenderer"
+    background: pygame.Surface
+    foreground: pygame.Surface
+    message_surface: pygame.Surface
+    sub_rect: locals.Rect
+    rect: locals.Rect
+
+    def __init__(self, running_game_renderer: "RunningGameRenderer") -> None:
+        super().__init__(running_game_renderer.master)
+        self.running_game_renderer = running_game_renderer
+        self.master = self.running_game_renderer.master
+
+        rect: locals.Rect = self.master.screen.get_clip()
+
+        font = pygame.font.SysFont("arial", 50)
+        game = self.running_game_renderer.game
+        self.message_surface = font.render("Player '{0}' won the Game".format(game.player_won.name), True, NEARLY_BLACK)
+
+        width = self.message_surface.get_width()
+        height = self.message_surface.get_height()
+        top = int(rect.centery - (height / 2))
+        left = int(rect.centerx - (width / 2))
+        self.rect = locals.Rect((left, top), (width, height))
+        self.sub_rect = locals.Rect(0, 0, width, height)
+
+        self.background = pygame.Surface((rect.width, rect.height))
+        self.background.set_alpha(100)
+        self.foreground = pygame.Surface((width, height))
+        self.foreground.set_alpha(255)
+        self.foreground.set_colorkey(BLACK)
 
     def draw(self, surface: pygame.Surface):
-        super(FinishedGameRenderer, self).draw(surface)
+        surface.fill(WHITE)
+        self.running_game_renderer.draw(self.background)
+        self.foreground.blit(self.message_surface, self.message_surface.get_rect())
+
+        surface.blit(self.background, self.background.get_clip())
+        surface.blit(self.foreground, self.rect)
 
 
 class RunningGameRenderer(Renderer):
@@ -587,7 +624,7 @@ class RunningGameRenderer(Renderer):
             pygame.mouse.set_visible(True)
 
         if self.game.game_state == GameState.FINISHED:
-            return FinishedGameRenderer(self.master)
+            return FinishedGameRenderer(self)
         return self
 
 
