@@ -7,9 +7,8 @@ from typing import Tuple, List, Callable, Any
 import pygame
 from pygame import locals
 
-from balls.game import Game, Ball, Player, GameState, AiPlayer, create_game, PlayerArguments
+from balls.game import Game, Ball, Player, GameState, AiPlayer, create_game, PlayerArguments, GameArguments
 from balls.text import TextInput
-from vector2 import Vector2
 
 pygame.init()
 
@@ -258,6 +257,24 @@ class Button(Texture):
             surface.blit(self.text_surface, self.text_rect)
 
 
+def create_game_renderer(master: "PingPongRenderer", get_game_arguments: Callable[[], GameArguments]):
+    screen_rect = master.screen.get_clip()
+    info_area = locals.Rect(screen_rect.left, screen_rect.top, screen_rect.width, 50)
+    game_area = locals.Rect(screen_rect.left, screen_rect.top + 50, screen_rect.width, screen_rect.height - 50)
+
+    game_arguments = get_game_arguments()
+    current_game = create_game(game_area, game_arguments)
+
+    left_player_texture = PlayerTexture(current_game.left_player, WHITE)
+    right_player_texture = PlayerTexture(current_game.right_player, WHITE)
+
+    ball_texture = BallTexture(current_game.ball, WHITE)
+
+    info_texture = GameInfoTexture(info_area, current_game)
+    return RunningGameRenderer(master, current_game, ball_texture, left_player_texture,
+                               right_player_texture, info_texture)
+
+
 class CreateGameRenderer(Renderer):
     left_player_text: pygame.Surface
     left_player_text_rect: locals.Rect
@@ -386,25 +403,14 @@ class CreateGameRenderer(Renderer):
     def get_player_arguments(text_input: TextInput, ai_checkbox: CheckBox) -> PlayerArguments:
         return {"name": text_input.get_text(), "ai": ai_checkbox.checked}
 
-    def create_game_renderer(self) -> "RunningGameRenderer":
-        screen_rect = self.master.screen.get_clip()
-        info_area = locals.Rect(screen_rect.left, screen_rect.top, screen_rect.width, 50)
-        game_area = locals.Rect(screen_rect.left, screen_rect.top + 50, screen_rect.width, screen_rect.height - 50)
-
-        game_arguments = {
+    def get_game_arguments(self) -> GameArguments:
+        return {
             "left_player": self.get_player_arguments(self.left_player_input, self.left_player_ai_checkbox),
             "right_player": self.get_player_arguments(self.right_player_input, self.right_player_ai_checkbox),
         }
-        current_game = create_game(game_area, game_arguments)
 
-        left_player_texture = PlayerTexture(current_game.left_player, WHITE)
-        right_player_texture = PlayerTexture(current_game.right_player, WHITE)
-
-        ball_texture = BallTexture(current_game.ball, WHITE)
-
-        info_texture = GameInfoTexture(info_area, current_game)
-        return RunningGameRenderer(self.master, current_game, ball_texture, left_player_texture,
-                                   right_player_texture, info_texture)
+    def create_game_renderer(self) -> "RunningGameRenderer":
+        return create_game_renderer(self.master, self.get_game_arguments)
 
     def return_to_start(self):
         self.master.renderer = StartupGameRenderer(self.master)
@@ -523,29 +529,15 @@ class StartupGameRenderer(Renderer):
     def display_about(self):
         print(self)
 
+    @staticmethod
+    def get_game_arguments():
+        return {
+            "left_player": {"name": "Player1", "ai": True},
+            "right_player": {"name": "Player2", "ai": True},
+        }
+
     def start_game(self) -> "RunningGameRenderer":
-        screen_rect = self.master.screen.get_clip()
-        info_area = locals.Rect(screen_rect.left, screen_rect.top, screen_rect.width, 50)
-        game_area = locals.Rect(screen_rect.left, screen_rect.top + 50, screen_rect.width, screen_rect.height - 50)
-
-        left_player_rect = locals.Rect((game_area.left, game_area.centery), bar_dimension)
-        left_player = AiPlayer(left_player_rect, game_area, "Player 1", False)
-
-        right_player_rect = locals.Rect((game_area.right - bar_dimension[0], game_area.centery), bar_dimension)
-        right_player = AiPlayer(right_player_rect, game_area, "Player 2", True)
-
-        left_player_texture = PlayerTexture(left_player, WHITE)
-        right_player_texture = PlayerTexture(right_player, WHITE)
-
-        ball = Ball(locals.Rect(game_area.center, (10, 5)), game_area, Vector2(), 5, 250)
-        ball_texture = BallTexture(ball, WHITE)
-        current_game = Game(ball, left_player, right_player, game_area)
-        right_player.game = current_game
-        left_player.game = current_game
-
-        info_texture = GameInfoTexture(info_area, current_game)
-        return RunningGameRenderer(self.master, current_game, ball_texture, left_player_texture,
-                                   right_player_texture, info_texture)
+        return create_game_renderer(self.master, self.get_game_arguments)
 
 
 class FinishedGameRenderer(Renderer):
