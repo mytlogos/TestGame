@@ -2,7 +2,7 @@ from abc import ABC
 from datetime import datetime
 from enum import Enum
 from random import randint
-from typing import Union, Optional
+from typing import Union, Optional, TypedDict
 
 from pygame.rect import Rect
 
@@ -124,8 +124,52 @@ class GameState(Enum):
     FINISHED = 3
 
 
-class GameManager:
+class PlayerArguments(TypedDict):
+    width: Optional[int]
+    height: Optional[int]
+    name: str
+    ai: bool
+
+
+class BallArguments(TypedDict):
     pass
+
+
+class GameArguments(TypedDict):
+    left_player: PlayerArguments
+    right_player: PlayerArguments
+
+
+def create_game(area, arguments: GameArguments) -> "Game":
+    left_player = create_player(area, arguments["left_player"], False)
+    right_player = create_player(area, arguments["right_player"], True)
+
+    ball = Ball(Rect(area.center, (10, 5)), area, Vector2(), 5, 250)
+    current_game = Game(ball, left_player, right_player, area)
+
+    if arguments["left_player"]["ai"]:
+        left_player.game = current_game
+
+    if arguments["left_player"]["ai"]:
+        right_player.game = current_game
+    return current_game
+
+
+def create_player(area: Rect, arguments: PlayerArguments, right_side: bool) -> Player:
+    width = (arguments["width"] if "width" in arguments else 10)
+    height = (arguments["height"] if "height" in arguments else 100)
+    if right_side:
+        left = area.right - width
+    else:
+        left = area.left
+    top = area.centery
+
+    player_rect = Rect(left, top, width, height)
+    if arguments["ai"]:
+        left_player = AiPlayer(player_rect, area, arguments["name"], right_side)
+    else:
+        left_player = Player(player_rect, area, arguments["name"])
+    return left_player
 
 
 class Game:

@@ -7,7 +7,7 @@ from typing import Tuple, List, Callable, Any
 import pygame
 from pygame import locals
 
-from balls.game import Game, Ball, Player, GameState, AiPlayer
+from balls.game import Game, Ball, Player, GameState, AiPlayer, create_game, PlayerArguments
 from balls.text import TextInput
 from vector2 import Vector2
 
@@ -376,10 +376,38 @@ class CreateGameRenderer(Renderer):
                     check_box.toggle_checked()
 
     def create_game(self):
-        pass
+        renderer = self.create_game_renderer()
+        self.master.renderer = renderer
+        renderer.game.start()
+        clock.tick()
+        pygame.mouse.set_visible(False)
+
+    @staticmethod
+    def get_player_arguments(text_input: TextInput, ai_checkbox: CheckBox) -> PlayerArguments:
+        return {"name": text_input.get_text(), "ai": ai_checkbox.checked}
+
+    def create_game_renderer(self) -> "RunningGameRenderer":
+        screen_rect = self.master.screen.get_clip()
+        info_area = locals.Rect(screen_rect.left, screen_rect.top, screen_rect.width, 50)
+        game_area = locals.Rect(screen_rect.left, screen_rect.top + 50, screen_rect.width, screen_rect.height - 50)
+
+        game_arguments = {
+            "left_player": self.get_player_arguments(self.left_player_input, self.left_player_ai_checkbox),
+            "right_player": self.get_player_arguments(self.right_player_input, self.right_player_ai_checkbox),
+        }
+        current_game = create_game(game_area, game_arguments)
+
+        left_player_texture = PlayerTexture(current_game.left_player, WHITE)
+        right_player_texture = PlayerTexture(current_game.right_player, WHITE)
+
+        ball_texture = BallTexture(current_game.ball, WHITE)
+
+        info_texture = GameInfoTexture(info_area, current_game)
+        return RunningGameRenderer(self.master, current_game, ball_texture, left_player_texture,
+                                   right_player_texture, info_texture)
 
     def return_to_start(self):
-        pass
+        self.master.renderer = StartupGameRenderer(self.master)
 
     def handle_events(self, events: List[pygame.event.EventType]):
         self.left_player_input.update(events)
@@ -440,9 +468,9 @@ class StartupGameRenderer(Renderer):
         self.background_surface.set_alpha(100)
         self.foreground_surface = pygame.Surface((width, height))
         self.foreground_surface.set_alpha(255)
-        self.background_game = self.create_background_game()
+        self.background_game = self.run_background_game()
 
-    def create_background_game(self) -> "RunningGameRenderer":
+    def run_background_game(self) -> "RunningGameRenderer":
         renderer = self.start_game()
         renderer.game.start()
         clock.tick()
@@ -453,7 +481,7 @@ class StartupGameRenderer(Renderer):
 
         # when previous game finished, create a new game
         if renderer != self.background_game:
-            self.background_game = self.create_background_game()
+            self.background_game = self.run_background_game()
         return super().tick()
 
     def draw(self, surface: pygame.Surface):
@@ -488,13 +516,6 @@ class StartupGameRenderer(Renderer):
 
     def create_game(self):
         self.master.renderer = CreateGameRenderer(self.master)
-
-    def create_new_game(self):
-        renderer = self.start_game()
-        self.master.renderer = renderer
-        renderer.game.start()
-        clock.tick()
-        pygame.mouse.set_visible(False)
 
     def display_highscore(self):
         print(self)
