@@ -19,6 +19,7 @@ class TextInput:
     that can be moved using the arrow-keys. Delete, home and end work as well.
     """
     width: int
+    focused: bool
 
     def __init__(
             self,
@@ -51,6 +52,7 @@ class TextInput:
         self.max_string_length = max_string_length
         self.input_string = initial_string  # Inputted text
         self.width = width
+        self.focused = False
 
         if not os.path.isfile(font_family):
             font_family = pygame.font.match_font(font_family)
@@ -77,7 +79,9 @@ class TextInput:
         self.clock = pygame.time.Clock()
 
     def update(self, events):
-        previous_text = self.get_text()
+        if not self.focused:
+            return
+
         for event in events:
             if event.type == pygame.KEYDOWN:
                 self.cursor_visible = True  # So the user sees where he writes
@@ -116,7 +120,10 @@ class TextInput:
 
                 elif event.key == pl.K_HOME:
                     self.cursor_position = 0
-
+                elif event.key == pl.K_KP_ENTER:
+                    return True
+                elif event.key == pl.K_TAB or not len(event.unicode):
+                    continue
                 elif len(self.input_string) < self.max_string_length or self.max_string_length == -1:
                     # If no special key is pressed, add unicode of key to input_string
                     self.input_string = (
